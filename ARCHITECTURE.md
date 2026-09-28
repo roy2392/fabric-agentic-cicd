@@ -1,5 +1,9 @@
 # Architecture
 
+![Fabric agentic CI/CD architecture](docs/diagrams/architecture.svg)
+
+[Editable draw.io source](docs/diagrams/architecture.drawio) · [Full-size SVG](docs/diagrams/architecture.svg) · [Artwork credits](docs/diagrams/README.md)
+
 ```mermaid
 flowchart LR
   GH[GitHub source + pinned skills] --> CI[Tests + policy checks + Bicep build]
