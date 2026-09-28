@@ -33,13 +33,21 @@ The main target must not be Git-connected. Use a different workspace for Git-int
 
 ## GitHub Actions with OIDC
 
-Fork or use this template repository. Create an Environment such as `demo`, restrict it to main, and configure human reviewers. Create a dedicated Entra app/service principal and a federated credential with:
+Fork or use this template repository. Create an Environment such as `demo`, restrict it to main, and configure human reviewers. Create a dedicated Entra app/service principal. First discover the repository's exact OIDC prefix:
+
+```bash
+gh api repos/YOUR_OWNER/YOUR_REPO/actions/oidc/customization/sub --jq .sub_claim_prefix
+```
+
+Append `:environment:demo` to that returned prefix. New GitHub.com repositories use immutable owner/repository IDs, for example `repo:YOUR_OWNER@OWNER_ID/YOUR_REPO@REPO_ID:environment:demo`. Older repositories may use the name-only prefix. Do not guess or remove the IDs. See [GitHub's OIDC reference](https://docs.github.com/en/actions/reference/security/oidc).
+
+Create the federated credential using the exact resulting subject:
 
 ```json
 {
   "name": "github-demo",
   "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:YOUR_OWNER/YOUR_REPO:environment:demo",
+  "subject": "repo:YOUR_OWNER@OWNER_ID/YOUR_REPO@REPO_ID:environment:demo",
   "audiences": ["api://AzureADTokenExchange"]
 }
 ```
