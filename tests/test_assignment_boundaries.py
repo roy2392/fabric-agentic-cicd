@@ -24,3 +24,12 @@ def test_assignment_text_limits(tmp_path):
  a=runtime(tmp_path)
  for value in ('a'*100001,'a\x00b'):
   with pytest.raises(ValueError):a.write_file('docs/assigned.md',value)
+
+
+def test_publication_description_fits_ado_limit():
+ from scripts.assignment_runtime import pr_description
+ description=pr_description('s'*11999,'a'*40,'test output '*2000)
+ assert len(description)<4000
+ assert 'a'*40 in description
+ assert 'Human merge remains required' in description
+ assert 'no new Fabric execution' in description

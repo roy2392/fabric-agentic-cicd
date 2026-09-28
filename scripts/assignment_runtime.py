@@ -8,6 +8,9 @@ from scripts.settings import load,repo_url,project_url
 from scripts.ado_client import AdoClient
 from scripts.agent_auth import token_for
 ROOT=Path(__file__).resolve().parents[1]
+def pr_description(summary,head,output):
+ return summary[:2000]+'\n\nValidated source: '+head+'\nScope: local utility/docs checks only; no new Fabric execution.\nChecks:\n```\n'+output[-1100:]+'\n```\nFull check output is recorded on the linked work item and in the revision-bound review evidence. Human merge remains required.'
+
 class Assignment:
  def __init__(self,issue,role):
   if role not in ('developer','reviewer'):raise ValueError('Unknown role')
@@ -104,7 +107,7 @@ class Assignment:
   self.git('add','--',*self.task['files'])
   if self.git('diff','--cached','--name-only'):self.git('-c','user.name=fabric-agents-developer','-c','user.email=fabric-agents-developer@demo.invalid','commit','-m',f'wi-{self.task["id"]}: '+self.task['title'])
   head=self.git('rev-parse','HEAD');self.git('push','-u','origin',self.task['branch'])
-  s=self.state();a=self.ado();description=summary+'\n\nValidated source: '+head+'\nScope: local utility/docs checks only; no new Fabric execution.\nChecks:\n```\n'+report['output']+'\n```\nHuman merge remains required.'
+  s=self.state();a=self.ado();description=pr_description(summary,head,report['output'])
   if s.get('pr_id'):pr=a.request('PATCH',self.base+f'/pullrequests/{s["pr_id"]}?api-version=7.1',{'description':description})[2]
   else:
    matches=[p for p in a.get(self.base+'/pullrequests?searchCriteria.status=active&api-version=7.1')['value'] if p['sourceRefName']=='refs/heads/'+self.task['branch']]
