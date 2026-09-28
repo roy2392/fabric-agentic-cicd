@@ -7,7 +7,8 @@
 - Local regression suite: 73 tests passed, including actual stdio-MCP rejection before skills are read, separate-session read gates, target/config validation, tenant routing, timestamp precision and existing workflow protections.
 - Private SQL/network Bicep compiled successfully. Compilation is not an Azure deployment.
 - Portable deployment completed in a fresh isolated workspace on 2026-09-28: all seven activities succeeded; source, raw, current and history counts were all 3. The deployed notebook reported Succeeded. This ran from the local deployment CLI using operator authentication.
-- GitHub workflow results are recorded after completion; local deployment does not prove GitHub OIDC deployment.
+- [GitHub CI passed](https://github.com/roy2392/fabric-agentic-cicd/actions/runs/36462667986) for the initial portable release, including all 73 tests.
+- The first OIDC deployment exposed the new immutable repository-subject format. The exact-ID trust correction preserves the approved scope. Deployment results remain separate from CI.
 
 ## Historical demo
 
