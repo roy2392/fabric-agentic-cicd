@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "pipeline_concurrency": 1,
+  "load_mode": "full_snapshot",
+  "deletions": "reject",
+  "schema_evolution": "reject",
+  "late_snapshots": "reject",
+  "max_local_rows_per_table": 10000,
+  "max_review_cycles": 3
+}
+

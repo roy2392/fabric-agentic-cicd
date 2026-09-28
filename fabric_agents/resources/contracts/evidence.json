@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object", "additionalProperties": false,
+  "required": ["version", "run_id", "job_id", "evidence_kind", "revision", "standards_hash", "snapshot_hash", "observed_at", "created_at", "status", "checks", "tables", "fabric_run_id"],
+  "properties": {
+    "version": {"const": 1},
+    "run_id": {"type": "string", "minLength": 1},
+    "job_id": {"type": "string", "minLength": 1},
+    "evidence_kind": {"const": "local_delta_execution"},
+    "revision": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "standards_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "snapshot_hash": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "observed_at": {"type": "string"},
+    "created_at": {"type": "string"},
+    "status": {"enum": ["passed", "failed"]},
+    "fabric_run_id": {"type": "null"},
+    "checks": {"type": "array", "minItems": 1, "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "passed", "expected", "actual"],
+      "properties": {"name": {"type": "string"}, "passed": {"type": "boolean"}, "expected": {}, "actual": {}}
+    }},
+    "tables": {"type": "array", "items": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "raw_file", "delta_path", "delta_version", "current_rows", "history_rows"],
+      "properties": {
+        "name": {"type": "string"}, "raw_file": {"type": "string"}, "delta_path": {"type": "string"},
+        "delta_version": {"type": "integer", "minimum": 0}, "current_rows": {"type": "integer", "minimum": 0}, "history_rows": {"type": "integer", "minimum": 0}
+      }
+    }}
+  }
+}
+

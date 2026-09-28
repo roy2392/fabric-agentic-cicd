@@ -1,0 +1,6 @@
+{
+  "tiers": [{"tier_id": 1, "name": "Silver"}, {"tier_id": 2, "name": "Gold"}],
+  "members": [{"member_id": 1, "name": "Demo member A", "tier_id": 2}, {"member_id": 2, "name": "Demo member B", "tier_id": 2}, {"member_id": 3, "name": "Demo member C", "tier_id": 1}],
+  "point_events": [{"member_id": 1, "event_seq": 1, "points": 10}, {"member_id": 1, "event_seq": 2, "points": 25}, {"member_id": 2, "event_seq": 1, "points": 50}, {"member_id": 3, "event_seq": 1, "points": 15}]
+}
+

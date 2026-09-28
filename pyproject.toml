@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fabric-engineering-agents"
+version = "0.1.0"
+description = "Local Fabric engineering workflow foundation with explicit evidence boundaries"
+requires-python = ">=3.12"
+dependencies = ["pyarrow>=24,<25", "deltalake>=1.6,<2", "jsonschema>=4.23,<5"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10"]
+live = ["cryptography>=46,<47"]
+
+[project.scripts]
+fabric-agents = "fabric_agents.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["fabric_agents*"]
+
+[tool.setuptools.package-data]
+fabric_agents = ["resources/**/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

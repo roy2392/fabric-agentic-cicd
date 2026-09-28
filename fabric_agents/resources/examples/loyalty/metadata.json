@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "source": "synthetic-loyalty",
+  "pipeline_concurrency": 1,
+  "tables": [
+    {"name": "tiers", "primary_key": ["tier_id"], "columns": {"tier_id": "integer", "name": "string"}, "load_mode": "full_snapshot", "scd_type": 2, "deletions": "reject"},
+    {"name": "members", "primary_key": ["member_id"], "columns": {"member_id": "integer", "name": "string", "tier_id": "integer"}, "load_mode": "full_snapshot", "scd_type": 2, "deletions": "reject"},
+    {"name": "point_events", "primary_key": ["member_id", "event_seq"], "columns": {"member_id": "integer", "event_seq": "integer", "points": "integer"}, "load_mode": "full_snapshot", "scd_type": 2, "deletions": "reject"}
+  ]
+}
+

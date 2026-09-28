@@ -1,0 +1,1 @@
+Follow AGENTS.md. Use the pinned Microsoft Fabric skills in vendor/skills-for-fabric. With the bounded MCP runtime, read every required resource using read_fabric_skill before project tools. The restricted runtime deliberately exposes the official files through a read-only tool instead of enabling unrelated plugins or shell access.
