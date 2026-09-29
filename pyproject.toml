@@ -11,7 +11,7 @@ dependencies = ["pyarrow>=24,<25", "deltalake>=1.6,<2", "jsonschema>=4.23,<5"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8,<10"]
-live = ["cryptography>=46,<47"]
+live = ["cryptography>=46,<51"]
 
 [project.scripts]
 fabric-agents = "fabric_agents.cli:main"
