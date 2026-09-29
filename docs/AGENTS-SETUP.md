@@ -44,3 +44,7 @@ Both agents must read the locked Fabric skill files before project tools. They c
 ## Retained scope
 
 The adapters are intentionally specific to one synthetic loyalty onboarding issue at a time. They are not a generic autonomous data engineer, a hosted multi-user service, or an OS isolation boundary. Use a separate host/OS account for each role if required by your security model. Do not run the historical tenant-specific closeout scripts from another environment; those scripts are not part of the public distribution.
+
+## Additional board work
+
+For scoped local utilities and documentation tasks, use the [board assignment runner](BOARD-ASSIGNMENTS.md). It creates separate developer/reviewer cards and isolated clones, enforces the official skills gate, and runs developer tests in a macOS sandbox. These follow-up tasks do not mutate Fabric or replace live ingestion evidence.
