@@ -169,7 +169,7 @@ class Worker:
         if requirements_hash(latest['fields']) != task['requirements_hash']:
             return self.blocked(folder, 'Requirements changed before dispatch')
         review = self.item(task['review_id'])
-        if review['fields']['System.State'] != 'Doing':
+        if action == 'reviewer' and review['fields']['System.State'] != 'Doing':
             self.patch(review, {'System.State': 'Doing'})
         if 'ready-for-human-merge' in tags(latest['fields']):
             self.patch(latest, {'System.Tags': '; '.join(sorted(tags(latest['fields']) - {'ready-for-human-merge'}))})

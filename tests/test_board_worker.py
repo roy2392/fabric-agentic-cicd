@@ -182,6 +182,7 @@ def test_full_lifecycle_and_repeated_polls(tmp_path, monkeypatch):
     monkeypatch.setattr('scripts.board_worker.subprocess.run', run)
     monkeypatch.setattr('scripts.board_worker.repo_url', lambda: 'https://example.invalid/repo')
     assert w.process(w.item(12))['status'] == 'developer_finished'
+    assert w.item(13)['fields']['System.State'] == 'To Do'
     assert w.process(w.item(12))['status'] == 'reviewer_finished'
     assert w.process(w.item(12))['status'] == 'human_merge'
     assert w.process(w.item(12)) is None
