@@ -1,6 +1,6 @@
 # Additional board assignments
 
-The original dispatcher intentionally serves one Fabric onboarding issue. A separate assignment runner handles three follow-up demo tasks: metadata preflight, recorded-run reporting, and an operator recovery/meeting playbook. These change only local utility, test and documentation files in the deployer's Azure DevOps solution repository. They do not deploy Fabric items or alter SQL data.
+The original dispatcher intentionally serves one Fabric onboarding issue. A separate assignment runner handles local utility, test and documentation tasks in the deployer's Azure DevOps solution repository. The [board worker](BOARD-AUTOMATION.md) can pick up new `dev-agent` Issues automatically, run Claude, trigger independent Codex review and wait for the human merge. It does not deploy Fabric items or alter SQL data.
 
 ## Run
 
@@ -20,7 +20,7 @@ python -m scripts.assignment_dispatcher ISSUE_ID developer --reason "Address the
 python -m scripts.assignment_dispatcher ISSUE_ID reviewer --reason "Review the corrected source revision"
 ```
 
-Use one running process per role and issue. Separate issues have isolated clones and can run concurrently. Inspect the state, validation reports, session logs and actual PR between iterations. The runner is single-shot; no unattended polling loop or schedule is installed. Stop at three correction cycles and ask the human if requirements remain disputed.
+These dispatcher commands are the manual path for the original three assignments. Do not run them concurrently with the board worker for an automatically registered issue. The worker serializes automatic sessions and stops after at most three correction cycles (four developer runs including the initial implementation, eight model sessions total). The [automation guide](BOARD-AUTOMATION.md) explains scheduling and recovery.
 
 ## Controls and proof
 
