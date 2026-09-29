@@ -7,6 +7,7 @@ from pathlib import Path
 from scripts.settings import load,repo_url,project_url
 from scripts.ado_client import AdoClient
 from scripts.agent_auth import token_for
+from scripts.wiki_context import WikiSession
 from scripts.board_policy import eligible, requirements_hash, validate_plan
 ROOT=Path(__file__).resolve().parents[1]
 def pr_description(summary,head,output):
@@ -20,6 +21,13 @@ class Assignment:
   self.task=json.loads((self.folder/'task.json').read_text());assert self.task['id']==issue
   self.home=self.folder/role;self.home.mkdir(exist_ok=True);self.clone=self.home/'solution'
   self.m=load();self.base='fabric-agents/_apis/git/repositories/'+self.m['repository_id']
+ def wiki_session(self):
+  if not hasattr(self,'_wiki'):
+   self._wiki=WikiSession(self.ado(),self.m['wiki_id'],self.role,self.home)
+  return self._wiki
+ def wiki_catalog(self):return self.wiki_session().catalog()
+ def read_wiki_page(self,path):return self.wiki_session().read_page(path)
+ def wiki_ready(self,check_current=False):return self.wiki_session().require_ready(check_current)
  def ado(self):return AdoClient(role=self.role)
  def git(self,*args):
   env={'PATH':os.environ.get('PATH','/usr/bin:/bin'),'HOME':str(self.home),'GIT_TERMINAL_PROMPT':'0','GIT_CONFIG_NOSYSTEM':'1','GIT_CONFIG_GLOBAL':'/dev/null','GIT_CONFIG_COUNT':'2','GIT_CONFIG_KEY_0':'http.extraHeader','GIT_CONFIG_VALUE_0':'AUTHORIZATION: bearer '+token_for(self.role,'499b84ac-1321-427f-aa17-267ca6975798'),'GIT_CONFIG_KEY_1':'credential.helper','GIT_CONFIG_VALUE_1':''}
@@ -38,7 +46,7 @@ class Assignment:
   if (self.folder/'clarification.json').exists():raise RuntimeError('Assignment is awaiting human clarification')
  def plan_assignment(self,files,tests,min_tests):
   if self.role!='developer' or not self.task.get('automatic'):raise ValueError('Automatic developer assignment only')
-  self.require_active();plan=validate_plan(files,tests,min_tests)
+  self.wiki_ready();self.require_active();plan=validate_plan(files,tests,min_tests)
   if self.task['files']:raise ValueError('Plan already fixed; do not expand scope')
   if not self.clone.exists():raise ValueError('Read assignment and inspect repository first')
   for name in files:self.path(name)
@@ -76,6 +84,7 @@ class Assignment:
    pinned={'head':head,'target':target,'pr_id':s['pr_id']};(self.home/'review-state.json').write_text(json.dumps(pinned))
    result={'assignment':self.task,'pr':pr,'pinned':pinned,'files':self.git('ls-tree','-r','--name-only',head).splitlines(),'diff':self.git('diff',target+'...'+head),'validation':s.get('validation'),'private_checklist':(ROOT/'.runs/reviewer-private/checklist.md').read_text(),'scope_note':'Only local utilities/docs are changed. Do not require a new Fabric run for these files. Verify tests are local, fixtures labeled, claims honest, and no fabric/ configuration or policies changed. Apply relevant private checklist requirements without publishing checklist text.'}
   if s.get('pr_id'):result['threads']=a.get(self.base+f'/pullrequests/{s["pr_id"]}/threads?api-version=7.1')['value']
+  result['wiki']=self.wiki_catalog()
   return result
  def path(self,path,write=False):
   if not isinstance(path,str) or not path or '\\' in path or Path(path).is_absolute() or '..' in Path(path).parts:raise ValueError('Unsafe path')
@@ -89,7 +98,7 @@ class Assignment:
   if p.stat().st_size>160000:raise ValueError('Read limit')
   return {'path':path,'content':p.read_text()}
  def write_file(self,path,content):
-  self.require_active()
+  self.wiki_ready();self.require_active()
   p=self.path(path,True)
   if not isinstance(content,str) or len(content.encode())>100000:raise ValueError('Write limit')
   if '\x00' in content:raise ValueError('Text files only')
@@ -104,9 +113,9 @@ class Assignment:
   return sorted(all_changes)
  def run_checks(self):
   if self.role!='developer':raise ValueError('Reviewer cannot execute code')
-  self.require_active()
+  self.wiki_ready();self.require_active()
   if not self.task['files']:raise RuntimeError('Plan exact files before writing or checking')
-  self.changes();before=self.snapshot();report={'scope':'local tests only; no Fabric execution','file_hashes':before}
+  self.changes();before=self.snapshot();report={'scope':'local tests only; no Fabric execution','file_hashes':before,'wiki_context':self.wiki_ready(True)}
   if self.task['tests']:
    if sys.platform!='darwin':raise RuntimeError('This operator runner requires macOS sandbox-exec; fail closed elsewhere')
    scratch=self.home/'scratch';scratch.mkdir(exist_ok=True)
@@ -129,23 +138,28 @@ class Assignment:
   (self.home/'validation.json').write_text(json.dumps(report,indent=2));return report
  def publish_pr(self,summary):
   if self.role!='developer':raise ValueError('Developer only')
-  self.require_active()
+  self.wiki_ready();self.require_active()
   if not self.task['files']:raise RuntimeError('Plan required')
   if not isinstance(summary,str) or not 80<len(summary)<12000:raise ValueError('Substantive summary required')
   self.changes();report=json.loads((self.home/'validation.json').read_text())
   if report['exit_code']!=0 or report['file_hashes']!=self.snapshot():raise RuntimeError('Fresh passing checks required')
+  wiki=self.wiki_ready(True)
+  if report.get('wiki_context',{}).get('wiki_commit')!=wiki['wiki_commit']:raise RuntimeError('Validation used different wiki revision; rerun checks')
   self.git('add','--',*self.task['files'])
   if self.git('diff','--cached','--name-only'):self.git('-c','user.name=fabric-agents-developer','-c','user.email=fabric-agents-developer@demo.invalid','commit','-m',f'wi-{self.task["id"]}: '+self.task['title'])
   head=self.git('rev-parse','HEAD');self.git('push','-u','origin',self.task['branch'])
-  s=self.state();a=self.ado();description=pr_description(summary,head,report['output'])
+  s=self.state();a=self.ado();description=pr_description(summary,head,report['output'])+'\nWiki context: '+wiki['wiki_commit']
   if s.get('pr_id'):pr=a.request('PATCH',self.base+f'/pullrequests/{s["pr_id"]}?api-version=7.1',{'description':description})[2]
   else:
    matches=[p for p in a.get(self.base+'/pullrequests?searchCriteria.status=active&api-version=7.1')['value'] if p['sourceRefName']=='refs/heads/'+self.task['branch']]
    pr=matches[0] if matches else a.request('POST',self.base+'/pullrequests?api-version=7.1',{'sourceRefName':'refs/heads/'+self.task['branch'],'targetRefName':'refs/heads/main','title':f'wi-{self.task["id"]}: '+self.task['title'],'description':description,'reviewers':[{'id':self.m['agents']['reviewer']['ado_id'],'isRequired':True},{'id':self.m['operator_ado_id'],'isRequired':True}],'workItemRefs':[{'id':str(self.task['id'])}]})[2]
   s.update(pr_id=pr['pullRequestId'],head=head,validation={**report,'source_commit':head});self.save(s)
-  self.comment('CLAUDE_IMPLEMENTATION_READY '+json.dumps({'source_commit':head,'pr':repo_url()+'/pullrequest/'+str(s['pr_id']),'validation':report['output'],'scope':report['scope']}))
+  self.comment('CLAUDE_IMPLEMENTATION_READY '+json.dumps({'source_commit':head,'pr':repo_url()+'/pullrequest/'+str(s['pr_id']),'validation':report['output'],'scope':report['scope'],'wiki_context':wiki}))
   return {'pr_id':s['pr_id'],'source_commit':head,'url':repo_url()+'/pullrequest/'+str(s['pr_id'])}
  def submit_review(self,source_commit,verdict,body):
+  wiki=self.wiki_ready(True)
+  developer_wiki=self.state().get('validation',{}).get('wiki_context',{}).get('wiki_commit')
+  if developer_wiki and developer_wiki!=wiki['wiki_commit']:raise RuntimeError('Developer and reviewer wiki revisions differ; operator reconciliation required')
   self.require_active()
   if self.role!='reviewer' or verdict not in ('approve','changes_requested'):raise ValueError('Review scope')
   if not isinstance(body,str) or not 100<len(body)<20000:raise ValueError('Substantive evidence required')
@@ -153,10 +167,10 @@ class Assignment:
   pr=a.get(base+'?api-version=7.1')
   if pr['status']!='active' or source_commit!=pinned['head'] or pr['lastMergeSourceCommit']['commitId']!=source_commit or pr['lastMergeTargetCommit']['commitId']!=pinned['target']:raise RuntimeError('Review revision changed')
   if not any(x['id']==self.m['operator_ado_id'] and x.get('isRequired') for x in pr['reviewers']):raise RuntimeError('Human reviewer requirement missing')
-  a.request('POST',base+'/threads?api-version=7.1',{'comments':[{'content':'Independent Codex review of '+source_commit+'\n\n'+body,'commentType':1}],'status':2 if verdict=='approve' else 1})
+  a.request('POST',base+'/threads?api-version=7.1',{'comments':[{'content':'Independent Codex review of '+source_commit+'\nWiki context: '+wiki['wiki_commit']+'\n\n'+body,'commentType':1}],'status':2 if verdict=='approve' else 1})
   vote=a.request('PUT',base+'/reviewers/'+self.m['agents']['reviewer']['ado_id']+'?api-version=7.1',{'id':self.m['agents']['reviewer']['ado_id'],'vote':10 if verdict=='approve' else -5,'isRequired':True})[2]
   if not vote.get('isRequired'):raise RuntimeError('Reviewer must remain required')
-  receipt={'source_commit':source_commit,'target_commit':pinned['target'],'verdict':verdict,'pr_id':pinned['pr_id'],'body':body}
+  receipt={'source_commit':source_commit,'target_commit':pinned['target'],'verdict':verdict,'pr_id':pinned['pr_id'],'body':body,'wiki_context':wiki}
   (self.home/f'review-{source_commit}-{time.time_ns()}.json').write_text(json.dumps(receipt,indent=2))
   if verdict=='approve':
    for t in a.get(base+'/threads?api-version=7.1')['value']:

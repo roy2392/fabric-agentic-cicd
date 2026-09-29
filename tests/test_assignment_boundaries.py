@@ -4,7 +4,7 @@ import pytest
 from scripts.assignment_runtime import Assignment
 
 def runtime(tmp_path,role='developer'):
- a=Assignment.__new__(Assignment);a.role=role;a.clone=tmp_path/'solution';a.clone.mkdir();a.task={'files':['docs/assigned.md']};return a
+ a=Assignment.__new__(Assignment);a.role=role;a.clone=tmp_path/'solution';a.clone.mkdir();a.task={'files':['docs/assigned.md']};a.wiki_ready=lambda *args: {};return a
 
 def test_assignment_only_accepts_allowed_writes(tmp_path):
  a=runtime(tmp_path);assert a.write_file('docs/assigned.md','hello')['bytes']==5

@@ -23,7 +23,7 @@ def pr():
 
 
 def receipt():
-    return {'pr_id': 8, 'source_commit': 'source', 'target_commit': 'target', 'verdict': 'approve'}
+    return {'pr_id': 8, 'source_commit': 'source', 'target_commit': 'target', 'verdict': 'approve', 'wiki_context': {'wiki_commit': 'wiki-head'}}
 
 
 def test_exact_tag_and_trusted_owner():
@@ -92,6 +92,7 @@ class FakeAdo:
         self.items = {12: issue()}; self.calls = []
     def safe_url(self, path): return 'https://dev.azure.com/example/' + path
     def get(self, path):
+        if '/refs?' in path: return {'value': [{'name': 'refs/heads/wikiMaster', 'objectId': 'wiki-head'}]}
         return copy.deepcopy(self.items[int(path.split('workitems/')[1].split('?')[0])])
     def request(self, method, path, body, **kwargs):
         self.calls.append((method, path, body))
@@ -108,7 +109,7 @@ class FakeAdo:
 
 
 def worker(tmp_path):
-    return Worker(FakeAdo(), {'repository_id': 'repo', 'tenant_id': 'tenant', 'operator_ado_id': 'human',
+    return Worker(FakeAdo(), {'repository_id': 'repo', 'wiki_id': 'wiki', 'tenant_id': 'tenant', 'operator_ado_id': 'human',
         'agents': {'developer': {'object_id': 'dev'}, 'reviewer': {'object_id': 'rev', 'ado_id': 'reviewer'}}}, tmp_path)
 
 
@@ -174,7 +175,7 @@ def test_full_lifecycle_and_repeated_polls(tmp_path, monkeypatch):
     def run(command, **kwargs):
         role = command[4]; calls.append(role)
         if role == 'developer':
-            save(folder / 'state.json', {'pr_id': 8, 'head': 'source', 'validation': {'source_commit': 'source'}})
+            save(folder / 'state.json', {'pr_id': 8, 'head': 'source', 'validation': {'source_commit': 'source', 'wiki_context': {'wiki_commit': 'wiki-head'}}})
         else:
             save(folder / 'reviewer/review-source-1.json', receipt())
         return SimpleNamespace(returncode=0)
@@ -201,7 +202,7 @@ def test_target_change_reopens_review_and_drops_ready_tag(tmp_path, monkeypatch)
     w = worker(tmp_path); folder = w.register(issue())
     w.a.items[12]['fields']['System.Tags'] += '; ready-for-human-merge'
     w.a.items[13]['fields']['System.State'] = 'Done'
-    save(folder / 'state.json', {'pr_id': 8, 'head': 'source', 'validation': {'source_commit': 'source'}})
+    save(folder / 'state.json', {'pr_id': 8, 'head': 'source', 'validation': {'source_commit': 'source', 'wiki_context': {'wiki_commit': 'wiki-head'}}})
     save(folder / 'reviewer/review-source-1.json', receipt())
     remote = pr(); remote['lastMergeTargetCommit']['commitId'] = 'new_target'
     original_get = w.a.get
@@ -226,3 +227,14 @@ def test_unexpected_push_cannot_inherit_ready_approval(tmp_path):
     w.a.get = lambda path: pr() if '/pullrequests/' in path else original_get(path)
     assert w.process(w.item(12))['status'] == 'blocked'
     assert w.item(13)['fields']['System.State'] != 'Done'
+
+@pytest.mark.parametrize('context', [None, {'wiki_commit': 'stale'}])
+def test_new_assignments_cannot_reach_review_with_missing_or_stale_wiki(tmp_path, context):
+    w = worker(tmp_path); folder = w.register(issue())
+    validation = {'source_commit': 'source'}
+    if context: validation['wiki_context'] = context
+    save(folder / 'state.json', {'pr_id': 8, 'head': 'source', 'validation': validation})
+    original = w.a.get
+    w.a.get = lambda path: pr() if '/pullrequests/' in path else original(path)
+    assert w.process(w.item(12))['status'] == 'blocked'
+    assert 'wiki' in read(folder / 'worker.json')['blocked'].lower()

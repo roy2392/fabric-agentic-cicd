@@ -9,6 +9,9 @@ T={
  'fabric_skill_catalog':('Read pinned skill catalog',{},skills.catalog),
  'read_fabric_skill':('Read complete pinned upstream resource',{'path':{'type':'string'}},skills.read_resource),
  'fabric_skills_ready':('Verify required skill reads',{},skills.require_ready),
+ 'wiki_catalog':('Pin the project handbook revision and list required pages',{},runtime.wiki_catalog),
+ 'read_wiki_page':('Read a complete required handbook page at the pinned revision',{'path':{'type':'string'}},runtime.read_wiki_page),
+ 'wiki_context_ready':('Verify every required wiki page was read in this process',{},runtime.wiki_ready),
  'read_assignment':('Read assigned board task and prepare role-specific clone; reviewer pins exact PR revision',{},runtime.context),
  'read_file':('Read a tracked or assigned file in this role clone',{'path':{'type':'string'}},runtime.read_file)}
 if role=='developer':T.update({

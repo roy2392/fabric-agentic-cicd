@@ -99,7 +99,7 @@ class Worker:
                                 content_type='application/json-patch+json')[2]
         task = {'id': issue, 'review_id': review['id'], 'title': fields['System.Title'],
                 'slug': 'automatic', 'brief': fields.get('System.Description', ''),
-                'files': [], 'tests': None, 'min_tests': 0, 'automatic': True,
+                'files': [], 'tests': None, 'min_tests': 0, 'automatic': True, 'wiki_context_required': True,
                 'requirements_hash': requirements_hash(fields), 'branch': 'codex/wi-' + str(issue) + '-automatic'}
         save(folder / 'task.json', task)
         save(folder / 'worker.json', {'registration': 'ready', 'actions': 0, 'developer_runs': 0})
@@ -141,7 +141,17 @@ class Worker:
         pr = self.a.get(self.base + '/pullrequests/' + str(published['pr_id']) + '?api-version=7.1') if published.get('pr_id') else None
         if pr and pr['status'] == 'active' and (pr['lastMergeSourceCommit']['commitId'] != published.get('head') or published.get('validation', {}).get('source_commit') != published.get('head')):
             return self.blocked(folder, 'Published PR changed outside the validated agent revision')
-        action = next_action(state, pr, self.receipt(folder, pr), self.m['agents']['reviewer']['ado_id'], self.m['operator_ado_id'])
+        receipt = self.receipt(folder, pr)
+        if pr and pr['status'] == 'active':
+            from scripts.wiki_context import current_commit
+            context = published.get('validation', {}).get('wiki_context', {})
+            if task.get('wiki_context_required') and not context:
+                return self.blocked(folder, 'Missing required developer wiki context')
+            if context and context['wiki_commit'] != current_commit(self.a, self.m['wiki_id']):
+                return self.blocked(folder, 'Wiki changed since developer validation; operator reconciliation required')
+            if receipt and task.get('wiki_context_required') and receipt.get('wiki_context', {}).get('wiki_commit') != context.get('wiki_commit'):
+                return self.blocked(folder, 'Missing or mismatched reviewer wiki context')
+        action = next_action(state, pr, receipt, self.m['agents']['reviewer']['ado_id'], self.m['operator_ado_id'])
         if action == 'merged':
             self.patch(self.item(issue), {'System.State': 'Done', 'System.Tags': '; '.join(sorted(tags(item['fields']) - {'ready-for-human-merge', 'agent-blocked'}))})
             self.announce(folder, 'merged', 'Human merge verified: ' + pr['lastMergeCommit']['commitId'] + '. Issue completed. No Fabric deployment was performed by this worker.')

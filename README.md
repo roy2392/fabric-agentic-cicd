@@ -44,6 +44,8 @@ Open the `.drawio` file in [diagrams.net](https://app.diagrams.net/) or draw.io 
 
 GitHub distributes and tests the implementation. The optional agent work-item/PR loop uses your Azure DevOps project. API deployment targets a dedicated workspace; Git-connected authoring workspaces follow their reviewed commit/sync lifecycle.
 
+**[Platform handbook and agent context →](docs/WIKI-CONTEXT.md)** Thirteen structured wiki pages cover architecture, ingestion, metadata, source/table inventory and recovery. Both assignment agents read a pinned wiki revision before work; validation and review retain revision and page-hash evidence.
+
 **[Automatic board pickup →](docs/BOARD-AUTOMATION.md)** Create an Issue with acceptance criteria and tag `dev-agent`. A configured local watcher runs Claude, triggers independent Codex review, loops on findings, and waits for your merge. Automatic scope is utility code, tests and documentation; cloud deployment retains its separate approval path.
 
 ## What has been verified
