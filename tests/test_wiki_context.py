@@ -77,3 +77,10 @@ def test_handbook_complete_and_links_resolve():
             assert content.startswith('# ')
             for link in re.findall(r'\]\(/([^)#]+)', content): assert link in targets, (name, link)
     assert 'history_count' in files['Ingestion-Framework-Guide.md']
+
+def test_published_metadata_example_passes_real_validation():
+    import re
+    from scripts.developer_runtime import validate_metadata
+    text = source_files()['Metadata-Schema-Reference.md']
+    example = re.search(r'```json\n(.*?)\n```', text, re.S).group(1)
+    assert validate_metadata(json.loads(example))[0]['primary_key_columns'] == ['tenant_id', 'member_id']
